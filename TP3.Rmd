@@ -1,0 +1,413 @@
+---
+title: ''
+mainfont: Arial
+geometry: left = 2.5cm, right = 2cm, top = 2cm, bottom = 2cm
+output:
+  html_document:
+    df_print: paged
+  pdf_document:
+    latex_engine: xelatex
+    highlight: zenburn
+header-includes:
+- \usepackage{tcolorbox}
+- \usepackage{float}
+- \usepackage{sectsty}
+- \usepackage{paralist}
+- \usepackage{setspace}\spacing{1.5}
+- \usepackage{fancyhdr}
+- \usepackage{lastpage}
+- \usepackage{dcolumn}
+- \usepackage{natbib}\bibliographystyle{agsm}
+- \usepackage[nottoc, numbib]{tocbibind}
+- \usepackage[toc,title,page]{appendix}
+- \usepackage{xcolor}
+- \usepackage{framed}
+- \usepackage{fontspec}
+- \fancyhead[R]{\nouppercase{\leftmark}}
+- \pagestyle{fancy}
+- \renewcommand\footrulewidth{1pt}
+- "\\fancyfoot[L]{\\textcolor{blue}{\\textbf{TP2 - Logiciel statistique R}}}"
+- \fancyfoot[C]{\textbf{Page \thepage/\pageref{LastPage}}}
+- \fancyfoot[R]{\textcolor{orange}{KPAKOU M'Mounéné ISEP3}}
+- \setlength{\headheight}{15pt}
+fontsize: 12pt
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(tinytex.verbose = TRUE)
+```
+
+\allsectionsfont{\centering}
+\subsectionfont{\raggedright}
+\subsubsectionfont{\raggedright}
+\thispagestyle{empty}
+
+\begin{tcolorbox}[colback=white,colframe=blue]
+
+\begin{centering}
+
+\vspace{0cm}
+
+```{r ANSD_logo, echo=F, out.width="20%"}
+knitr::include_graphics("ansd.png")
+```
+\vspace{0cm}
+
+\Large
+----------------------------------------------------------------------\newline
+{\fontsize{16pt}{14pt}\textbf {AGENCE NATIONALE DE LA STATISTIQUE ET DE LA DEMOGRAPHIE}}
+----------------------------------------------------------------------\newline 
+\vspace{0cm}
+```{r ensae_logo, echo=F, out.width="16%"}
+knitr::include_graphics("ensae.jpg")
+```
+\vspace{0cm}
+
+\Large
+{\fontsize{14pt}{14pt}\bf ECOLE NATIONALE DE LA STATISTIQUE ET DE L'ANALYSE ECONOMIQUE PIERRE NDIAYE}
+
+\vspace{0.5cm}
+
+\Large
+
+\doublespacing
+\begin{center}
+  \setlength{\fboxrule}{1pt} % Épaisseur de la bordure
+  \setlength{\fboxsep}{9pt} % Espace entre la bordure et le contenu
+  \colorbox{yellow}{ % Couleur de fond
+    \begin{minipage}{0.8\textwidth}
+ {\bf TP 3 - Logiciel statistique R}
+    \end{minipage}
+  }
+\end{center}
+
+\vspace{0.3cm}
+
+\normalsize
+\singlespacing
+Par
+
+\vspace{0.4 cm}
+
+\Large
+
+{\bf KPAKOU M'Mounéné ISEP3}
+
+\vspace{0.5 cm}
+Chargé du cours:
+\vspace{0.5 cm}
+
+\Large
+
+{\bf Mr. Aboubacar HEMA}
+
+\vspace{0.4 cm}
+{\fontsize{12pt}{14pt}\bf Ingénieur des Travaux Statistiques}
+
+\vspace{0.5cm}
+
+\normalsize
+
+\end{centering}
+\end{tcolorbox}
+\newpage
+
+
+
+```{r echo=FALSE}
+rm(list = ls())
+```
+
+ *Libraries*
+```{r warning=FALSE, message=FALSE}
+library(labelled)# labelisation
+library(tidyverse)
+library(readxl)# lecture des fichiers excels
+library(sjPlot)#création de graphiques descriptifs
+library(dplyr)
+library(gtsummary)
+library(plotly) # graphique
+
+
+
+```
+
+#  1. Importation et mise en forme
+### *Repertoire de travail*
+
+```{r}
+setwd(getwd())
+```
+### *Importation des bases de données*
+```{r message=FALSE,warning=FALSE,comment=""}
+data1 <- read_csv("annual-growth-in-gni-per-capita.csv")
+data2 <- read_csv("gender-inequality-index.csv")
+data3 <- read_csv("population-growth-annual.csv")
+```
+
+*Sélection des pays de l'afrique de l'ouest*
+```{r} 
+west_africa <- c("Togo","Benin","Senegal","Niger","Mali","Ghana",
+                 "Nigeria","Burkina Faso","Guinea","Guinea-Bissau",
+                 "Sierra Leone","Cabo Verde","Gambia","Côte d’Ivoire","Mauritania")
+```
+
+
+
+# Graphique I
+## Aggrégation des données et fusion
+```{r}
+#Monde#
+world <- data1 %>%
+  group_by(`Start Year`) %>%
+  summarise(Value = mean(Value))
+#Niger#
+niger <- data1 %>%
+  filter(`Region Name` == "Niger") %>%
+  group_by(`Start Year`) %>%
+  summarise(Value = Value)
+#Afrique de l'ouest#
+West_Africa <- data1 %>%
+  filter(`Region Name` %in%west_africa) %>%
+  group_by(`Start Year`) %>%
+  summarise(Value = mean(Value))
+world$Region.Name <- "World"
+niger$Region.Name <- "Niger"
+West_Africa$Region.Name <- "Western Africa"
+
+```
+
+
+*Fusion des bases de données*
+```{r}
+base <- rbind(rbind(world, niger),West_Africa)
+```
+
+## Premier graphique
+```{r warning=FALSE}
+ggplot(base) +
+  aes(x  = `Start Year`, y = Value, colour = Region.Name) +
+  # ajout des points
+  geom_point(shape = "circle", size = 2) + 
+  #Ajout de la courbe reliant les points
+  geom_line(size = 0.7,show.legend=NULL) +  
+  scale_fill_hue(direction = 1.2) +
+  #Couleurs des différentes courbes
+  scale_color_manual(
+  values = c(Niger = "#85C1E9",
+  `Western Africa` = "#5B5B5C",
+  World = "#B2BABB")
+  )+
+  # Titres
+  labs(title = "Figure : Income growth and distribution (Gini Index)",
+       caption = "Source : World Bank", x=NULL, y=NULL, color = NULL) +
+  # Echelles des axes en abscisses
+  scale_x_continuous(breaks=seq(from=1970, to = 2021, by=10))+
+  # Echelles des axes en ordonnées
+  scale_y_continuous(breaks = seq(from=-7, to = 10, by=1.5), expand = c(0,0))+
+  ylim(-7,10)+
+  # Thèmes du fond
+  theme_minimal()+
+  theme(
+    # Paramètre du titre, couleur, police, position
+    plot.title = element_text(colour = "#0F4761", face = "italic", size=9, vjust = 8),
+    # Paramètre de la legende, taille...
+    legend.text = element_text(size = 8), 
+    # Position de la legende
+    legend.position = c(0.13, 1.03),
+    legend.direction = "horizontal", 
+    # Paramètres pour la source, position...
+    plot.caption = element_text(hjust = 0),
+    # Effacer les petites lignes du cadran
+    panel.grid.minor = element_blank(),
+    #  lignes horizontales 
+    panel.grid.major.y = element_line(linetype = "dashed"),
+    #  cadran
+    plot.margin = margin(30,30,30,30))
+```
+# Graphique II
+
+## Aggrégation des données et fusion
+```{r}
+#Monde#
+world <- data3 %>%
+  group_by(`Start Year`) %>%
+  summarise(Value = mean(Value))
+#Niger#
+niger <- data3 %>%
+  filter(`Region Name` == "Niger") %>%
+  group_by(`Start Year`) %>%
+  summarise(Value = Value)
+#Afrique de l'ouest#
+West_Africa <- data3 %>%
+  filter(`Region Name` %in%west_africa) %>%
+  group_by(`Start Year`) %>%
+  summarise(Value = mean(Value))
+
+world$Region.Name <- "World"
+niger$Region.Name <- "Niger"
+West_Africa$Region.Name <- "Western Africa"
+
+```
+
+*Fusion des bases de données*
+```{r}
+base <- rbind(rbind(world, niger),West_Africa)
+```
+
+```{r comment="", warning=FALSE,message=FALSE}
+ggplot(base) +
+  aes(x  = `Start Year`, y = Value, colour = Region.Name) +
+  # ajout des points
+  geom_point(shape = "circle", size = 2) + 
+  #Ajout de la courbe reliant les points
+  geom_line(size = 0.58, show.legend = NULL) +  
+  scale_fill_hue(direction = 1) +
+  #Couleurs des différentes courbes
+  scale_color_manual(
+  values = c(Niger = "#85C1E9",
+  `Western Africa` = "#5B5B5C",
+  World = "#B2BABB")
+  )+
+  # Titres
+  labs(title = "Figure : Annual population growth (%)",
+       caption = "Source : World Bank", x=NULL, y=NULL, color = NULL) +
+  # Echelles des axes en abscisses
+  scale_x_continuous(breaks=seq(from=1970, to = 2021, by=10))+
+  # Echelles des axes en ordonnées
+  scale_y_continuous(breaks = seq(from=0, to = 4, by=1.5), expand = c(0,0))+ #l'echelle des axes
+  ylim(0,4)+
+  # Thèmes du fond
+  theme_minimal()+
+  theme(
+    # Paramètre du titre, couleur, police, position
+    plot.title = element_text(colour = "#0F4761", face = "italic", size=9, vjust = 8),
+    # Paramètre de la legende, taille...
+    legend.text = element_text(size = 8), 
+    # Position de la legende
+    legend.position = c(0.132, 1.03),
+    legend.direction = "horizontal", 
+    # Paramètres pour la source, position...
+    plot.caption = element_text(hjust = 0),
+    # Effacer les petites lignes du cadran
+    panel.grid.minor = element_blank(),
+    # Mettre les lignes horizontales en forme de tirets
+    panel.grid.major.y = element_line(linetype = "dashed"),
+    # Marge pour le cadran
+    plot.margin = margin(30,30,30,30))
+```
+# Graphique III
+
+## Aggrégation des données et fusion
+```{r}
+#Monde#
+world <- data2 %>%
+  group_by(`Start Year`) %>%
+  summarise(Value = mean(Value))
+#Niger#
+niger <- data2 %>%
+  filter(`Region Name` == "Niger") %>%
+  group_by(`Start Year`) %>%
+  summarise(Value = Value)
+#Afrique de l'ouest#
+West_Africa <- data2 %>%
+  filter(`Region Name` %in%west_africa) %>%
+  group_by(`Start Year`) %>%
+  summarise(Value = mean(Value))
+world$Region.Name <- "World"
+niger$Region.Name <- "Niger"
+West_Africa$Region.Name <- "Western Africa"
+
+```
+
+
+*Fusion des bases de données*
+```{r}
+base <- rbind(rbind(world, niger),West_Africa)
+```
+
+*Graphique*
+
+```{r echo=TRUE,message=FALSE,warning=FALSE,eval=TRUE}
+library(ggpp) 
+specific_value <- base[base$`Start Year` == 2010 & base$Region.Name == "World", ]
+
+# Graphique ggplot avec geom_label_s
+ggplot(base) +
+  aes(x = `Start Year`, y = Value, colour = Region.Name) +
+  geom_point(shape = "circle", size = 2) +
+  geom_line(size = 0.58, show.legend = NULL) +
+  scale_color_manual(values = c(Niger = "#85C1E9", `Western Africa` = "#5B5B5C", World = "#B2BABB")) +
+  labs(title = "Figure : Gender inequality index",
+       caption = "Source : UNDP", x = NULL, y = NULL, color = NULL) +
+  scale_x_continuous(breaks = seq(from = 1960, to = 2021, by = 10)) +
+  scale_y_continuous(breaks = seq(from = 0, to = 0.8, by = 0.2), expand = c(0, 0)) +
+  ylim(0, 0.8) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(colour = "#0F4761", face = "italic", size = 9, vjust = 8),
+    legend.text = element_text(size = 8),
+    legend.position = c(0.132, 1.03),
+    legend.direction = "horizontal",
+    plot.caption = element_text(hjust = 0),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_line(linetype = "dashed"),
+    plot.margin = margin(30, 30, 30, 30)
+  ) +
+  # Ajouter l'étiquette au point spécifique avec geom_label_s
+  #Vjust et hjust place le label sur le point 
+  geom_label_s(data = specific_value, aes(label = paste("World :", format(Value, digits = 2))), 
+               x = 2010, y = specific_value$Value, vjust = 0, hjust =0, color = "black")
+```
+\newline
+*Autre alternative*
+
+On va utiliser la fonction ggplotly
+```{r comment="",warning=FALSE,eval=TRUE,echo=TRUE}
+
+p <-ggplot(base) +
+      aes(x  = `Start Year`, y = Value, fill=Region.Name, colour = Region.Name) +
+      geom_point(aes(text = paste(Region.Name, ": ",
+                        round(Value,1))),shape = "bullet", size=2) +
+      geom_line(size=1) +  
+      scale_fill_hue(direction = 1) +  
+      scale_color_manual(
+      values = c(Niger = "#85C1E9",
+      `western Africa` = "#5B5B5C",
+      world = "#B2BABB")
+      )+
+      scale_fill_manual(
+      values = c(Niger = "#85C1E9",
+      `western Africa` = "#5B5B5C",
+      world = "#B2BABB")
+      )+
+      labs(title = "Figure : Gender inequality index",caption = "Source : World Bank", x=NULL, y=NULL, color =NULL, fill=NULL)+
+      geom_abline(intercept = 0, slope = 0, color="white")+
+      scale_x_continuous(breaks=seq(from=1990, to = 2020, by=5))+
+      scale_y_continuous(breaks = seq(0, 0.8, by =0.2),
+                         labels=c("",seq(0.2,0.8, by=0.2)))+ 
+       ylim(0,0.8)+
+       theme_minimal()+
+       theme(
+         plot.title = element_text(face = "bold", size = 10,"italic", colour = "#85C1E9"),
+         panel.grid.minor = element_blank(),
+         panel.grid.major.y = element_line(linetype = "dashed")
+         )
+
+#Graphique dynamique
+ggplotly(p, tooltip = "text")%>%
+      plotly::layout(legend=list(x=0, #Paramètre pour la légende
+                                y = 1.04,
+                                 orientation='h'), annotations = 
+                       #Paramètre pour la source
+ list(x = 0.2, y = -0.08, text = "Source: UNDP", 
+      showarrow = F, xref='paper', yref='paper', 
+      xanchor='right', yanchor='auto', xshift=0, yshift=0,
+      font=list(size=12, color="black")))
+
+
+```
+
+
+
+
